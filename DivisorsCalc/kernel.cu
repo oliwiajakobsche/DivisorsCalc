@@ -5,19 +5,7 @@
 #include <thrust/execution_policy.h>
 #include <iostream>
 
-
 using namespace std;
-
-
-void PrintTab(char* tabName, int* tab, int iterateTo)
-{
-    for (int i = 0; i < iterateTo; i++)
-    {
-        cout << tabName <<"[" << i << "] = " <<tab[i] << endl;
-    }
-
-    cout << endl;
-}
 
 __global__ void InsertIntoCTabIsDivisible(int* a, int number, int nrOfThreads) {
     int threadId = blockIdx.x * blockDim.x + threadIdx.x;
@@ -48,17 +36,20 @@ int main()
 {
     PrintProjectInfo();
     int y = GetNumberFromUser();
+
+    cudaError_t cudaStatus = cudaSetDevice(0);;
+    const clock_t begin_time = clock();
     int n = MaxDividorToCheck(y);
 
     //************** PREPARING MEMORY **************
     int blockSize = 1024;
     dim3 threadsAmmount(blockSize);
     dim3 blocksAmmount((n / blockSize) + 1);
-    //Alokacja pamięci na tablice po stronie CPU (host)
+    //Memory allocation for tab on CPU side (host)
     int* c = new int[n];
     int* d = new int[n];
     int* e = new int[n];
-    //Alokacja pamięci na tablice po stronie GPU (device)
+    //Memory allocation for tab on GPU side (device)
     int* device_c;
     int* device_d;
     int* device_e;
@@ -68,7 +59,8 @@ int main()
     cudaMalloc((void**)&device_e, size);
     //**********************************************
                                                                                                      
-    InsertIntoCTabIsDivisible<<<blocksAmmount, blockSize>>>(device_c, y, n);    
+    InsertIntoCTabIsDivisible<<<blocksAmmount, blockSize>>>(device_c, y, n);   
+    cudaDeviceSynchronize();
     cudaMemcpy(c, device_c, size, cudaMemcpyDeviceToHost);    
     PrintTab("c", c, n);
 
@@ -77,13 +69,31 @@ int main()
     PrintTab("d", d, n);
 
     InsertIntoETabDividors<<<blocksAmmount, blockSize>>>(device_c, device_d, device_e, n);
+    cudaDeviceSynchronize();
     cudaMemcpy(e, device_e, size, cudaMemcpyDeviceToHost);
     int dividorsCounter = c[n - 1] + d[n - 1];
     PrintTab("e", e, dividorsCounter);
+    cout << "Time: " << float(clock() - begin_time) / CLOCKS_PER_SEC << " s " << endl;
 
-    return 0;
+    //Release memory
+    delete[] c; delete[] d; delete[] e;    
+    cudaStatus = cudaDeviceReset();
+    if (cudaStatus != cudaSuccess) {
+        fprintf(stderr, "cudaDeviceReset failed!");
+        return 1;
+    }
+    return EXIT_SUCCESS;
 }
 
+void PrintTab(char* tabName, int* tab, int iterateTo)
+{
+    for (int i = 0; i < iterateTo; i++)
+    {
+        cout << tabName << "[" << i << "] = " << tab[i] << endl;
+    }
+
+    cout << endl;
+}
 
 int MaxDividorToCheck(int y)
 {
