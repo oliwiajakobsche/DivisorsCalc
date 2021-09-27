@@ -2,7 +2,9 @@
 #include "device_launch_parameters.h"
 #include "kernel.h"
 #include <stdio.h>
+#include <thrust/execution_policy.h>
 #include <iostream>
+
 
 using namespace std;
 
@@ -15,6 +17,19 @@ __global__ void InsertIntoCTabIsDivisible(int* a, int number, int nrOfThreads) {
             a[threadId] = 1;
         else
             a[threadId] = 0;
+    }
+}
+
+__global__ void InsertIntoETabDividors(int* c, int* d, int* e, int nrOfThreads) {
+    int threadId = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (threadId < nrOfThreads)
+    {
+        if (c[threadId] == 1)
+        {
+            int temp = d[threadId];
+            e[temp] = threadId + 1;
+        }
     }
 }
 
@@ -43,13 +58,31 @@ int main()
     //**********************************************
 
                                                                                                  
-    InsertIntoCTabIsDivisible<<<blocksAmmount, blockSize>>>(device_c, y, n);
-    
+    InsertIntoCTabIsDivisible<<<blocksAmmount, blockSize>>>(device_c, y, n);    
     cudaMemcpy(c, device_c, size, cudaMemcpyDeviceToHost);
     
     for (int i = 0; i < n; i++)
     {
         cout << "c[" << i << "] =" << c[i] << endl;
+    }
+
+    exclusive_scan(thrust::device, device_c, device_c + n, device_d, 0);
+    cudaMemcpy(d, device_d, size, cudaMemcpyDeviceToHost);
+
+    for (int i = 0; i < n; i++)
+    {
+        cout << "d[" << i << "] =" << d[i] << endl;
+    }
+
+    InsertIntoETabDividors<<<blocksAmmount, blockSize>>>(device_c, device_d, device_e, n);
+
+    cudaMemcpy(e, device_e, size, cudaMemcpyDeviceToHost);
+
+    int dividorsCounter = c[n - 1] + d[n - 1];
+
+    for (int i = 0; i < dividorsCounter; i++)
+    {
+        cout << e[i] <<endl;
     }
 
     return 0;
