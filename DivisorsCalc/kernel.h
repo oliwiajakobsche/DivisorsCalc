@@ -4,4 +4,4 @@ int GetNumberFromUser();
 
 void PrintProjectInfo();
 
-int DetermineNumberOfDivisorsToCheck(int y);
+int MaxDividorToCheck(int y);
