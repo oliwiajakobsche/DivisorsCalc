@@ -8,6 +8,17 @@
 
 using namespace std;
 
+
+void PrintTab(char* tabName, int* tab, int iterateTo)
+{
+    for (int i = 0; i < iterateTo; i++)
+    {
+        cout << tabName <<"[" << i << "] = " <<tab[i] << endl;
+    }
+
+    cout << endl;
+}
+
 __global__ void InsertIntoCTabIsDivisible(int* a, int number, int nrOfThreads) {
     int threadId = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -56,37 +67,23 @@ int main()
     cudaMalloc((void**)&device_d, size);
     cudaMalloc((void**)&device_e, size);
     //**********************************************
-
-                                                                                                 
+                                                                                                     
     InsertIntoCTabIsDivisible<<<blocksAmmount, blockSize>>>(device_c, y, n);    
-    cudaMemcpy(c, device_c, size, cudaMemcpyDeviceToHost);
-    
-    for (int i = 0; i < n; i++)
-    {
-        cout << "c[" << i << "] =" << c[i] << endl;
-    }
+    cudaMemcpy(c, device_c, size, cudaMemcpyDeviceToHost);    
+    PrintTab("c", c, n);
 
     exclusive_scan(thrust::device, device_c, device_c + n, device_d, 0);
     cudaMemcpy(d, device_d, size, cudaMemcpyDeviceToHost);
-
-    for (int i = 0; i < n; i++)
-    {
-        cout << "d[" << i << "] =" << d[i] << endl;
-    }
+    PrintTab("d", d, n);
 
     InsertIntoETabDividors<<<blocksAmmount, blockSize>>>(device_c, device_d, device_e, n);
-
     cudaMemcpy(e, device_e, size, cudaMemcpyDeviceToHost);
-
     int dividorsCounter = c[n - 1] + d[n - 1];
-
-    for (int i = 0; i < dividorsCounter; i++)
-    {
-        cout << e[i] <<endl;
-    }
+    PrintTab("e", e, dividorsCounter);
 
     return 0;
 }
+
 
 int MaxDividorToCheck(int y)
 {
