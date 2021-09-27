@@ -6,17 +6,28 @@
 
 using namespace std;
 
+__global__ void InsertIntoCTabIsDivisible(int* a, int number, int nrOfThreads) {
+    int threadId = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (threadId < nrOfThreads)
+    {
+        if ((number % (threadId + 1) == 0))
+            a[threadId] = 1;
+        else
+            a[threadId] = 0;
+    }
+}
+
 int main()
 {
     PrintProjectInfo();
     int y = GetNumberFromUser();
     int n = MaxDividorToCheck(y);
 
-    // ************** PREPARING MEMORY **************
+    //************** PREPARING MEMORY **************
     int blockSize = 1024;
     dim3 threadsAmmount(blockSize);
     dim3 blocksAmmount((n / blockSize) + 1);
-    blocksAmmount.x = ((n) / blockSize) + 1;
     //Alokacja pamięci na tablice po stronie CPU (host)
     int* c = new int[n];
     int* d = new int[n];
@@ -29,7 +40,17 @@ int main()
     cudaMalloc((void**)&device_c, size);
     cudaMalloc((void**)&device_d, size);
     cudaMalloc((void**)&device_e, size);
-    // **********************************************
+    //**********************************************
+
+                                                                                                 
+    InsertIntoCTabIsDivisible<<<blocksAmmount, blockSize>>>(device_c, y, n);
+    
+    cudaMemcpy(c, device_c, size, cudaMemcpyDeviceToHost);
+    
+    for (int i = 0; i < n; i++)
+    {
+        cout << "c[" << i << "] =" << c[i] << endl;
+    }
 
     return 0;
 }
@@ -37,7 +58,7 @@ int main()
 int MaxDividorToCheck(int y)
 {
     int dividorsNr = floor(sqrt(y));
-    cout << "Max possible dividor to check - floor(sqrt(y)) = " << dividorsNr;
+    cout << "Max possible dividor to check - floor(sqrt(y)) = " << dividorsNr <<endl;
     return dividorsNr;
 }
 
